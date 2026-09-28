@@ -1,0 +1,417 @@
+<div class="chat-page">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <!-- Workspace Header -->
+    <div class="workspace-header">
+      <div class="workspace-info">
+        <div class="workspace-logo">S</div>
+        <div>
+          <h2>Slack-lite</h2>
+          <span>Workspace</span>
+        </div>
+      </div>
+      <button class="menu-button">⋯</button>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+      <button class="nav-item active">
+        <!-- <span>💬</span>
+        <span>Messages</span> -->
+      </button>
+     
+
+<!-- REGISTERED USERS -->
+<div class="users-section">
+
+  <div class="section-header">
+    <span>People</span>
+  </div>
+
+  <div
+    *ngIf="loadingUsers"
+    class="loading-users"
+  >
+    Loading users...
+  </div>
+
+  <div
+    *ngIf="!loadingUsers && users.length === 0"
+    class="loading-users"
+  >
+    No registered users found.
+  </div>
+<div
+  *ngFor="let user of users; trackBy: trackByFn"
+  class="user-item"
+  (click)="startConversation(user)"
+  style="cursor: pointer;"
+>
+  <div class="avatar">
+    {{ getInitials(user.name) }}
+  </div>
+
+  <div class="user-details">
+    <div class="user-name">
+      {{ user.name }}
+    </div>
+
+    <div class="user-status">
+      <span
+        [class.online]="user.status === 'online'"
+      >
+        ●
+      </span>
+
+      {{ user.status }}
+    </div>
+  </div>
+</div>
+
+<button
+  class="create-group-button"
+  (click)="showCreateGroup = true"
+>
+  ＋ Create Group
+</button>
+
+</div>
+      <button class="nav-item">
+        <!-- <span>⭐</span>
+        <span>Saved</span> -->
+      </button>
+    </nav>
+
+    <!-- Conversations List -->
+    <div class="conversation-section">
+      <div class="section-header">
+        <span>Conversations</span>
+        <button class="add-button">+</button>
+      </div>
+
+      <div class="conversation-list">
+        <!-- Loading Indicator -->
+        <div *ngIf="loadingConversations" class="loading-state" style="padding: 15px; color: #888;">
+          Loading conversations...
+        </div>
+
+        <!-- Empty State -->
+        <div *ngIf="!loadingConversations && conversations.length === 0" style="padding: 15px; color: #888;">
+          No conversations found.
+        </div>
+
+        <!-- Conversation Item List -->
+        <div
+  *ngFor="let conversation of conversations; trackBy: trackByFn"
+  class="conversation-item"
+  [class.active]="selectedConversation?._id === conversation._id"
+  (click)="selectConversation(conversation)"
+  style="
+    padding: 12px;
+    margin: 4px;
+    border-radius: 6px;
+    cursor: pointer;
+  "
+>
+
+  <div
+    style="
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    "
+  >
+
+    <div style="font-weight: bold;">
+      {{ getConversationName(conversation) }}
+    </div>
+
+    <!-- UNREAD COUNT -->
+    <span
+      *ngIf="unreadCounts[conversation._id] > 0"
+      style="
+        background: #e01e5a;
+        color: white;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      "
+    >
+      {{ unreadCounts[conversation._id] }}
+    </span>
+
+  </div>
+
+  <div
+    style="
+      font-size: 12px;
+      color: #666;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    "
+  >
+    {{ conversation.lastMessage?.content || 'No messages yet' }}
+  </div>
+
+</div>
+      </div>
+    </div>
+
+    <!-- Current User Bar -->
+    <div class="current-user" *ngIf="currentUser">
+
+  <div class="avatar user-avatar">
+    {{ getInitials(currentUser.name) }}
+  </div>
+
+  <div class="user-info">
+
+    <strong>
+      {{ currentUser.name }}
+    </strong>
+
+    <span
+      [class.online]="currentUser.status === 'online'"
+    >
+      {{ currentUser.status }}
+    </span>
+
+  </div>
+
+  <button class="logout-button">
+    ↪
+  </button>
+
+</div>
+
+  </aside>
+
+  <!-- MAIN CHAT -->
+  <main class="chat-main">
+
+    <!-- Header -->
+    <header class="chat-header">
+      <div class="chat-user" *ngIf="selectedConversation">
+        <div class="avatar large-avatar">
+          {{ getInitials(getConversationName(selectedConversation)) }}
+        </div>
+        <div>
+          <h3>{{ getConversationName(selectedConversation) }}</h3>
+          <div class="online-status">
+            <span class="status-dot"></span>
+            {{
+              selectedConversation.type === 'group'
+                ? selectedConversation.participants.length + ' members'
+                : 'Direct Message'
+            }}
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-user" *ngIf="!selectedConversation">
+        <h3>Select a conversation</h3>
+      </div>
+
+      <div class="chat-actions">
+        <!-- <button>🔍</button>
+        <button>⋯</button> -->
+      </div>
+    </header>
+
+    <!-- Message Stream -->
+    <section class="messages">
+
+    
+      <!-- Loading State -->
+      <div *ngIf="loadingMessages" style="padding: 20px; text-align: center; color: #888;">
+        Loading messages...
+      </div>
+
+      <!-- Error State -->
+      <div *ngIf="messageError" style="padding: 20px; color: #dc3545; text-align: center;">
+        {{ messageError }}
+      </div>
+
+      <!-- Empty Messages State -->
+      <div *ngIf="!loadingMessages && chatMessages.length === 0 && selectedConversation" style="padding: 20px; text-align: center; color: #888;">
+        No messages here yet. Start the conversation!
+      </div>
+
+      <!-- Messages List -->
+      <div *ngIf="!loadingMessages && chatMessages.length > 0" style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+        <div
+          *ngFor="let message of chatMessages; trackBy: trackByFn"
+          [style.align-self]="message.sender?._id === getCurrentUserId() ? 'flex-end' : 'flex-start'"
+          style="max-width: 70%; padding: 10px 14px; border-radius: 12px;"
+          [style.background]="message.sender?._id === getCurrentUserId() ? '#007bff' : '#e9ecef'"
+          [style.color]="message.sender?._id === getCurrentUserId() ? '#ffffff' : '#333333'"
+        >
+          <div style="font-size: 11px; font-weight: bold; margin-bottom: 4px; opacity: 0.85;">
+            {{ message.sender?.name || 'Unknown' }}
+          </div>
+          <div>
+            {{ message.content }}
+          </div>
+          <div
+  *ngIf="message.createdAt"
+  style="
+    font-size: 10px;
+    margin-top: 4px;
+    opacity: 0.7;
+    text-align: right;
+  "
+>
+  {{ message.createdAt | date:'shortTime' }}
+
+  <span
+    *ngIf="message.sender?._id === getCurrentUserId()"
+    style="margin-left: 5px;"
+  >
+   {{ (message.readBy?.length ?? 0) > 1 ? '✓✓' : '✓' }}
+  </span>
+</div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+      <!-- Typing Indicator -->
+      <div *ngIf="isTyping" class="typing-indicator" style="padding: 8px 20px; font-style: italic; color: #666; font-size: 12px;">
+        <span>{{ typingUserName }} is typing...</span>
+      </div>
+
+
+    <!-- Message Input -->
+    <footer class="message-input-area">
+      <div class="message-input-wrapper">
+        <button class="input-action">+</button>
+        <input  
+          type="text" 
+          [(ngModel)]="messageText"
+          (input)="onMessageTyping()"
+          [placeholder]=" 
+            selectedConversation 
+              ? 'Write a message...' 
+              : 'Select a conversation first...' 
+          "
+          [disabled]=" 
+            !selectedConversation || 
+            sendingMessage 
+          "
+          (keydown.enter)="sendMessage()"
+        />
+
+        <button class="input-action" [disabled]="!selectedConversation">😊</button>
+
+        <button
+          class="send-button"
+          [disabled]="
+            !selectedConversation ||
+            !messageText.trim() ||
+            sendingMessage
+          "
+          (click)="sendMessage()"
+        >
+          {{ sendingMessage ? '...' : '➤' }}
+        </button>
+      </div>
+    </footer>
+
+  </main>
+
+  <!-- CREATE GROUP MODAL -->
+
+<div
+  *ngIf="showCreateGroup"
+  class="group-modal-overlay"
+>
+
+  <div class="group-modal">
+
+    <h2>Create Group</h2>
+
+    <input
+      type="text"
+      [(ngModel)]="groupName"
+      placeholder="Group name"
+    />
+
+    <div
+      *ngIf="groupError"
+      class="group-error"
+    >
+      {{ groupError }}
+    </div>
+
+    <h4>Select members</h4>
+
+    <div class="group-members">
+
+      <div
+        *ngFor="let user of users"
+        class="group-member"
+        (click)="toggleGroupMember(user.id)"
+      >
+
+        <input
+          type="checkbox"
+          [checked]="
+            selectedGroupMembers.includes(user.id)
+          "
+          (click)="$event.stopPropagation()"
+          (change)="toggleGroupMember(user.id)"
+        />
+
+        <div class="avatar">
+          {{ getInitials(user.name) }}
+        </div>
+
+        <div>
+          <strong>
+            {{ user.name }}
+          </strong>
+
+          <div class="user-status">
+            {{ user.status }}
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="group-modal-actions">
+
+      <button
+        type="button"
+        (click)="showCreateGroup = false"
+      >
+        Cancel
+      </button>
+
+      <button
+        type="button"
+        [disabled]="creatingGroup"
+        (click)="createGroup()"
+      >
+        {{ creatingGroup ? 'Creating...' : 'Create Group' }}
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+</div>
