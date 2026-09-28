@@ -1,6 +1,6 @@
 
 export const environment = {
-  production: false,
-  apiUrl: 'http://localhost:4000/api',
-  socketUrl: 'http://localhost:4000'
+  production: true,
+  apiUrl: 'https://slack-lite-i82f.onrender.com/api',
+  socketUrl: 'https://slack-lite-i82f.onrender.com'
 };
